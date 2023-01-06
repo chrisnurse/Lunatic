@@ -12,16 +12,15 @@
         // 1 increment in mount position = 1/12 of an arcsecond 
         private readonly double step_resolution = 1.078781893;
 
-        public int RA { get; private set; }
+        public long RA { get; private set; }
 
-        public int DEC { get; private set; }
+        public long DEC { get; private set; }
 
         public string RaText
         {
             get
             {
-                return string.Format("{0}:{1}:{2}", RaHours, RaMinutes, RaSeconds);
-
+                return $"{RaHours:00}:{RaMinutes:00}:{RaSeconds:00}";
             }
         }
 
@@ -29,7 +28,8 @@
         {
             get
             {
-                return string.Format("{0}:{1}:{2}", DecDegrees, DecMinutes, DecSeconds);
+                var sign = Sign == DecSign.Plus ? "+" : "-";
+                return $"{sign}{DecDegrees:00}° {DecMinutes:00}\' {DecSeconds:00}\"";
 
             }
         }
@@ -40,9 +40,9 @@
 
         public int RaSeconds { get; private set; }
 
-        public int TotalRaSeconds { get; private set; }
+        public long TotalRaSeconds { get; private set; }
 
-        public int TotalDecSeconds { get; private set; }
+        public long TotalDecSeconds { get; private set; }
 
         public DecSign Sign { get; private set; }
 
@@ -52,7 +52,7 @@
 
         public double DecSeconds { get; private set; }
 
-        public AstronomicalPosition(int ra, int dec)
+        public AstronomicalPosition(long ra, long dec)
         {
             RA = ra;
             DEC = dec;
@@ -62,7 +62,7 @@
 
         public AstronomicalPosition WithOffset(int ra_offset, int dec_offset)
         {
-            return new AstronomicalPosition(this.RA + ra_offset, this.DEC + dec_offset);
+            return new AstronomicalPosition(this.RA + (long)(ra_offset * 12 * 15 * step_resolution), this.DEC + (long)(dec_offset * 12 * step_resolution));
         }
 
         public AstronomicalPosition Clone()
@@ -72,16 +72,27 @@
 
         private void SetCoordinates()
         {
-            // 1/12 of an arcsecond
-            TotalRaSeconds =(int)( RA / 12 / 15 / step_resolution);
-            TotalDecSeconds = (int)(DEC / 12 / step_resolution);
+            TotalRaSeconds = (long)(RA / 12 / 15 / step_resolution);
+            TotalDecSeconds = (long)(DEC / 12 / step_resolution);
 
-            RaHours = (int)(TotalRaSeconds / 60 * 60);
-            RaMinutes = (int)(TotalRaSeconds % 60 * 60) / 60;
-            RaSeconds = TotalRaSeconds % 60;
+            RaHours = (int)(TotalRaSeconds / (60 * 60)) % 24;
+            RaMinutes = (int)(TotalRaSeconds % (60 * 60)) / 60;
+            RaSeconds = (int)(TotalRaSeconds % 60);
 
-            DecDegrees = (int)TotalDecSeconds / 60 * 60;
-            DecMinutes = (int)(TotalDecSeconds % 60 * 60) / 60;
+            DecDegrees = (int)(TotalDecSeconds / (60 * 60)) % 360;
+
+
+            if (DecDegrees > 180)
+            {
+                DecDegrees = (360 * 60) - DecDegrees;
+                Sign = DecSign.Minus;
+            }
+            else
+            {
+                Sign = DecSign.Plus;
+            }
+
+            DecMinutes = (int)(TotalDecSeconds % (60 * 60)) / 60;
             DecSeconds = TotalDecSeconds % 60;
         }
     }

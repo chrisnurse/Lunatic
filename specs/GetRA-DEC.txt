@@ -1,0 +1,115 @@
+Below is a Visual Basic sub-procedure which will allow sending the Get RA-Dec command to any model of NexStar.  The ScopeType argument takes one of two values: "Little" or "Big".  "Little" for the GT models (60/80/114/4), "Big" for the N5 and N8.  It will display the results in text boxes on Form1.  Examples of how to call the procedure:
+
+To query the RA-Dec position of the original GT NexStar:
+GetRADec "Little"
+
+To query the RA-Dec position of a NexStar 5/8:
+GetRADec "Big"
+
+To query the RA-Dec position of a NexStar GPS or the new GT:
+GetRADec "GPS"
+
+To use the following procedure, place a serial communications control on Form1 and insure it is named Comm1.  Then place text boxes on Form1 and a command button to call the procedure.  Note the correct name for the text boxes in the later parts of the GetRADec procedure, i.e. txtRAHour.  SerPort is a string global variable that holds the integer number for the serial port on your computer.  For example, if the scope is connected to Com2, then SerPort should be a value of "2".
+ 
+Place the GetRADec and Wait procedures in a standard module and you'll be all set.  Note that if you have already placed a Wait procedure for the ScopeGoto procedure, you do not need to add another one.
+
+-----
+
+Sub GetRADec(ScopeType)
+    On Error GoTo ScopeCommError
+    Dim varInputBuffer As String
+    Dim RA1, RA2, Dec1, Dec2 As Integer
+    Dim RA, Dec As Double
+    
+    Comm1.CommPort = Val(SerPort)
+    Comm1.Settings = "9600,N,8,1"
+    Comm1.InputLen = 0
+    Comm1.PortOpen = True
+    
+    Comm1.Output = "?"
+    Wait 0.25
+    Comm1.Output = "E"
+    Wait 1.5
+    
+    varInputBuffer = Comm1.Input
+    Comm1.PortOpen = False
+
+    If ScopeType = "Little" Then
+        RA1 = Asc(Mid(varInputBuffer, 2, 1))
+        RA2 = Asc(Mid(varInputBuffer, 3, 1))
+        Dec1 = Asc(Mid(varInputBuffer, 5, 1))
+        Dec2 = Asc(Mid(varInputBuffer, 6, 1))
+        RA = RA1 * 256 + RA2
+        RA = RA / 1.011358 / 3 / 15
+        Dec = Dec1 * 256 + Dec2
+        Dec = Dec / 1.011358 / 3
+    Else
+        If ScopeType = "Big" Then
+            RA1 = Asc(Mid(varInputBuffer, 2, 1))
+            RA2 = Asc(Mid(varInputBuffer, 3, 1))
+            Dec1 = Asc(Mid(varInputBuffer, 4, 1))
+            Dec2 = Asc(Mid(varInputBuffer, 5, 1))
+            RA = RA1 * 256 + RA2
+            RA = RA / 1.011358 / 3 / 15
+            Dec = Dec1 * 256 + Dec2
+            Dec = Dec / 1.011358 / 3
+        Else
+            RA1 = Val("&h" & (Mid(varInputBuffer, 1, 2)))
+            RA2 = Val("&h" & (Mid(varInputBuffer, 3, 2)))
+            Dec1 = Val("&h" & (Mid(varInputBuffer, 6, 2)))
+            Dec2 = Val("&h" & (Mid(varInputBuffer, 8, 2)))
+            RA = ((RA1 * 256) + RA2) * 24 * 60 / 65536
+            Dec = ((Dec1 * 256) + Dec2) * 360 * 60 / 65536
+        End If
+    End If
+    
+    If (Round(((RA / 60) - Int(RA / 60)) * 60, 1) = 0 And Round(((RA / 60) - Int(RA / 60)) * 60, 1) > ((RA / 60) - Int(RA / 60)) * 60) Or (Round(((RA / 60) - Int(RA / 60)) * 60, 1) = 60) Then
+        txtRAHour = Int(RA / 60) + 1
+        If txtRAHour = 24 Then
+            txtRAHour = 0
+        End If
+    Else
+        txtRAHour = Int(RA / 60)
+    End If
+    
+    txtRAMin = Round(((RA / 60) - Int(RA / 60)) * 60, 1)
+    If txtRAMin = 60 Then
+        txtRAMin = 0
+    End If
+    
+    If Dec > (180 * 60) Then
+        txtDecSign = "-"
+        Dec = (360 * 60) - Dec
+    Else
+        txtDecSign = "+"
+    End If
+    If Round(((Dec / 60) - Int(Dec / 60)) * 60, 1) = 60 Then
+        txtDecDeg = Int(Dec / 60) + 1
+        txtDecMin = 0
+    Else
+        txtDecDeg = Int(Dec / 60)
+        txtDecMin = Round(((Dec / 60) - Int(Dec / 60)) * 60, 1)
+    End If
+    
+    Exit Sub
+ScopeCommError:
+    MsgBox "Unable to communicate with the scope.", vbOKOnly, "Error"
+
+End Sub
+-----
+
+Sub Wait(SecondsToPause As Double)
+On Error GoTo NSError
+    Dim Start
+    Screen.MousePointer = vbHourglass
+    Start = Timer   ' Set start time.
+    Do While Timer < Start + SecondsToPause
+        'Do nothing during the loop
+    Loop
+    Screen.MousePointer = vbDefault
+Exit Sub
+NSError:
+  MsgBox Err.Description
+End Sub
+
+

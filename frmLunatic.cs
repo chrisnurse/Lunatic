@@ -7,7 +7,7 @@ namespace Lunatic
         private SerialPort? serialPort;
         private System.Timers.Timer? pollTimer;
         private int pollInterval = 1000;
-        private int updatePositionInterval = 10;
+        private int updatePositionInterval = 5;
         private bool running = false;
 
         private int x = 0, y = 0;
@@ -66,15 +66,23 @@ namespace Lunatic
         {
             if (serialPort != null)
             {
-                //_serialPort.Write("?");
-                //Thread.Sleep(250);
-
-                // Get RA/DEC
+                // Get RA/DEC in 32bit format
                 serialPort.Write("e");
-                Thread.Sleep(250);
-                var result = serialPort.ReadExisting();
+                Thread.Sleep(1000);
+                var bytes = serialPort.ReadExisting();
 
-                return ParsePosition(result);
+                if (bytes.Trim().Length == 0 || bytes.Trim().Length < 17)
+                    return null;
+
+
+                // Remove any erroneous hash character
+                if (bytes[0] == '#')
+                    bytes = bytes.Substring(1);
+
+                var pos = ParsePosition(bytes);
+                Log("RA/DEC (Hex): " + bytes);
+
+                return pos;
             }
 
             return null;
@@ -85,13 +93,14 @@ namespace Lunatic
             // position format is text, with ra,dec#
             // ra and dec are 4 bytes each in hex format
             // e.g. 34AB0500,12CE0500#
+            // Ignore the last byte as it is always 00
             var bytes_per_coordinate = 4;
             var len = bytes_per_coordinate * 2;
             var ra_bytes = pos_32bit.Substring(0, len);
-            var dec_bytes = pos_32bit.Substring(7, len);
+            var dec_bytes = pos_32bit.Substring(9, len);
 
-            var ra = int.Parse(ra_bytes, System.Globalization.NumberStyles.HexNumber);
-            var dec = int.Parse(dec_bytes, System.Globalization.NumberStyles.HexNumber);
+            var ra = long.Parse(ra_bytes, System.Globalization.NumberStyles.HexNumber);
+            var dec = long.Parse(dec_bytes, System.Globalization.NumberStyles.HexNumber);
 
             var ap = new AstronomicalPosition(ra, dec);
 
@@ -100,7 +109,7 @@ namespace Lunatic
 
         private string GetGotoCommand(AstronomicalPosition pos)
         {
-            return string.Format("R{0:X2}{1:X2}{2:X2}00,{3:X2}{4:X2}{5:X2}00",
+            var cmd = string.Format("r{0:X2}{1:X2}{2:X2}00,{3:X2}{4:X2}{5:X2}00",
                 (pos.RA >> 24) & 0xff,
                 (pos.RA >> 16) & 0xff,
                 (pos.RA >> 8) & 0xff,
@@ -109,6 +118,10 @@ namespace Lunatic
                 (pos.DEC >> 16) & 0xff,
                 (pos.DEC >> 8) & 0xff
                 );
+
+            Log("Goto command: " + cmd);
+
+            return cmd;
         }
 
         private void ExecuteGotoCommand(AstronomicalPosition pos)
@@ -161,7 +174,6 @@ namespace Lunatic
         #endregion
 
         #region Status
-
         private void UpdateUIState()
         {
             lblRA.Invoke(() =>
@@ -222,14 +234,14 @@ namespace Lunatic
 
                 if (top_left != null && top_right != null)
                 {
-                    width = top_right.TotalRaSeconds - top_left.TotalRaSeconds;
+                    width = (int)(top_right.TotalRaSeconds - top_left.TotalRaSeconds);
                     lblWidth.Text = width.ToString();
 
                 }
 
                 if (top_left != null && bottom_right != null)
                 {
-                    height = bottom_right.TotalDecSeconds - top_left.TotalDecSeconds;
+                    height = (int)(bottom_right.TotalDecSeconds - top_left.TotalDecSeconds);
                     lblWidth.Text = height.ToString();
                 }
 
@@ -395,5 +407,15 @@ namespace Lunatic
         }
 
         #endregion
+
+        private void chkLog_CheckedChanged(object sender, EventArgs e)
+        {
+            txtLog.Visible = chkLog.Checked;
+        }
+
+        private void Log(string text)
+        {
+            txtLog.Text += text + "\r\n";
+        }
     }
 }
