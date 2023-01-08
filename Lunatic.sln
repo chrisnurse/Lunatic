@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33103.184
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lunatic", "Lunatic.csproj", "{4E8A431C-D1AA-49DC-B00B-EF39CCAA4AA8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lunatic", "Lunatic.csproj", "{4E8A431C-D1AA-49DC-B00B-EF39CCAA4AA8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lunatic.Helpers", "..\Lunatic.Helpers\Lunatic.Helpers.csproj", "{2CCAB3FF-B747-4D0D-BE47-4BD9BE506215}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lunatic.Test", "..\Lunatic.Test\Lunatic.Test.csproj", "{31365803-F7BD-4606-9810-DA90E72437BA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{4E8A431C-D1AA-49DC-B00B-EF39CCAA4AA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E8A431C-D1AA-49DC-B00B-EF39CCAA4AA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E8A431C-D1AA-49DC-B00B-EF39CCAA4AA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CCAB3FF-B747-4D0D-BE47-4BD9BE506215}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CCAB3FF-B747-4D0D-BE47-4BD9BE506215}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CCAB3FF-B747-4D0D-BE47-4BD9BE506215}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CCAB3FF-B747-4D0D-BE47-4BD9BE506215}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31365803-F7BD-4606-9810-DA90E72437BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31365803-F7BD-4606-9810-DA90E72437BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31365803-F7BD-4606-9810-DA90E72437BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31365803-F7BD-4606-9810-DA90E72437BA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

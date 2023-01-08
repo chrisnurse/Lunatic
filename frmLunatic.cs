@@ -16,9 +16,9 @@ namespace Lunatic
         private int max_y = 5;
         private int current_frame_elapsed = 0;
 
-        private AstronomicalPosition? top_left;
-        private AstronomicalPosition? top_right;
-        private AstronomicalPosition? bottom_right;
+        private EquatorialMountPosition? top_left;
+        private EquatorialMountPosition? top_right;
+        private EquatorialMountPosition? bottom_right;
 
         #region Construct / Destruct
 
@@ -62,61 +62,49 @@ namespace Lunatic
             UpdateUIState();
         }
 
-        private AstronomicalPosition? ReadPosition()
+        private EquatorialMountPosition? ReadPosition()
         {
-            if (serialPort != null)
+            try
             {
-                // Get RA/DEC in 32bit format
-                serialPort.Write("e");
-                Thread.Sleep(1000);
-                var bytes = serialPort.ReadExisting();
+                if (serialPort != null)
+                {
+                    // Get RA/DEC in 32bit format
+                    serialPort.Write("e");
+                    Thread.Sleep(1000);
+                    var bytes = serialPort.ReadExisting();
 
-                if (bytes.Trim().Length == 0 || bytes.Trim().Length < 17)
-                    return null;
+                    if (bytes.Trim().Length == 0 || bytes.Trim().Length < 17)
+                        return null;
 
 
-                // Remove any erroneous hash character
-                if (bytes[0] == '#')
-                    bytes = bytes.Substring(1);
+                    // Remove any erroneous hash character
+                    if (bytes[0] == '#')
+                        bytes = bytes.Substring(1);
 
-                var pos = ParsePosition(bytes);
-                Log("RA/DEC (Hex): " + bytes);
+                    var pos = EquatorialMountPosition.FromHex(bytes);
+                    Log("RA/DEC (Hex): " + bytes);
 
-                return pos;
+                    return pos;
+                }
+            }
+            catch (Exception e)
+            {
+                Log("Serial Communication Error: " + e.Message);
             }
 
             return null;
         }
 
-        private AstronomicalPosition ParsePosition(string pos_32bit)
-        {
-            // position format is text, with ra,dec#
-            // ra and dec are 4 bytes each in hex format
-            // e.g. 34AB0500,12CE0500#
-            // Ignore the last byte as it is always 00
-            var bytes_per_coordinate = 4;
-            var len = bytes_per_coordinate * 2;
-            var ra_bytes = pos_32bit.Substring(0, len);
-            var dec_bytes = pos_32bit.Substring(9, len);
-
-            var ra = long.Parse(ra_bytes, System.Globalization.NumberStyles.HexNumber);
-            var dec = long.Parse(dec_bytes, System.Globalization.NumberStyles.HexNumber);
-
-            var ap = new AstronomicalPosition(ra, dec);
-
-            return ap;
-        }
-
-        private string GetGotoCommand(AstronomicalPosition pos)
+        private string GetGotoCommand(EquatorialMountPosition pos)
         {
             var cmd = string.Format("r{0:X2}{1:X2}{2:X2}00,{3:X2}{4:X2}{5:X2}00",
-                (pos.RA >> 24) & 0xff,
-                (pos.RA >> 16) & 0xff,
-                (pos.RA >> 8) & 0xff,
+                (pos.RaEncoderStepValue >> 24) & 0xff,
+                (pos.RaEncoderStepValue >> 16) & 0xff,
+                (pos.RaEncoderStepValue >> 8) & 0xff,
 
-                (pos.DEC >> 24) & 0xff,
-                (pos.DEC >> 16) & 0xff,
-                (pos.DEC >> 8) & 0xff
+                (pos.DecEncoderStepValue >> 24) & 0xff,
+                (pos.DecEncoderStepValue >> 16) & 0xff,
+                (pos.DecEncoderStepValue >> 8) & 0xff
                 );
 
             Log("Goto command: " + cmd);
@@ -124,12 +112,17 @@ namespace Lunatic
             return cmd;
         }
 
-        private void ExecuteGotoCommand(AstronomicalPosition pos)
+        private void ExecuteGotoCommand(EquatorialMountPosition pos)
         {
             if (serialPort != null)
             {
+                // Create and send the GoTo command
                 var cmd = GetGotoCommand(pos);
                 serialPort.Write(cmd);
+
+                // Discard the acknowledgement #
+                Thread.Sleep(500);
+                var ack = serialPort.ReadExisting();
             }
         }
 
@@ -174,6 +167,7 @@ namespace Lunatic
         #endregion
 
         #region Status
+
         private void UpdateUIState()
         {
             lblRA.Invoke(() =>
@@ -385,7 +379,7 @@ namespace Lunatic
                 var pos = ReadPosition();
 
                 if (pos != null)
-                    udXStep.Value = pos.TotalRaSeconds - top_left.TotalRaSeconds;
+                    udXStep.Value = (decimal)(pos.TotalRaSeconds - top_left.TotalRaSeconds);
             }
         }
 
@@ -396,7 +390,7 @@ namespace Lunatic
                 var pos = ReadPosition();
 
                 if (pos != null)
-                    udYStep.Value = pos.TotalDecSeconds - top_left.TotalDecSeconds;
+                    udYStep.Value = (decimal)(pos.TotalDecSeconds - top_left.TotalDecSeconds);
             }
         }
 
@@ -408,6 +402,8 @@ namespace Lunatic
 
         #endregion
 
+        #region Logging
+
         private void chkLog_CheckedChanged(object sender, EventArgs e)
         {
             txtLog.Visible = chkLog.Checked;
@@ -417,5 +413,7 @@ namespace Lunatic
         {
             txtLog.Text += text + "\r\n";
         }
+
+        #endregion
     }
 }
