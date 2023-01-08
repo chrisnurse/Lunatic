@@ -198,6 +198,9 @@ namespace Lunatic
                     {
                         lblRA.Text = pos.RaText;
                         lblDec.Text = pos.DecText;
+
+                        Log("RA: " + pos.RaText);
+                        Log("DEC: " + pos.DecText);
                     }
                     else
                     {
